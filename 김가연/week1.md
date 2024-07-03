@@ -1,6 +1,4 @@
-### 무엇을 알게 되었나요?
-
-LogBack -> SLF4J 인터페이스의 구현체
+## 섹션 1
 ### application.yml
 ```
   jpa:
