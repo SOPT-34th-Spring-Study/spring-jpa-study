@@ -36,6 +36,7 @@ public class MemberService {
 }
 ```
 
+
 `@Transactional(readOnly=true)` 는 데이터의 변경이 없는 읽기 전용 메서드에 사용하는 어노테이션이다. 영속성 컨텍스트를 flush하지 않으므로 성능적인 면에서 약간의 이점이 존재한다.
 
 ### 필드 주입
@@ -48,6 +49,7 @@ public class MemberService {
     private MemberRepository memberRepository;
 }
 ```
+
 
 현재 코드는 필드 주입(Field Injection) 방식을 사용하고 있다. 필드 주입은 **멤버 객체에 `@Autowired`를 붙여 주입받는 방법**이다. 즉, 주입 받고자 하는 필드 위에`@Autowired` 어노테이션을 붙여주기만 하면 스프링이 직접 의존성을 주입해준다. 하지만 이런 필드 주입은 여러 단점이 존재한다.
 
@@ -149,9 +151,10 @@ https://www.inflearn.com/community/questions/253006/junit5-의-assertions-fail-�
 테스트는 케이스를 격리된 환경에서 실행하고 테스트가 끝나면 데이터를 초기화하는 것이 좋다. 
 그렇다면 테스트를 완전히 격리된 환경에서 할 수 있는 방법은 무엇일까? 바로 메모리 DB를 활용하는 것이다.
 
-![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/83b56896-62fe-4002-9c4e-a66b37df803c/6af9daa1-eafc-46eb-951a-8393444bc043/Untitled.png)
+![](https://velog.velcdn.com/images/yeoni_/post/dd9b23c9-ad8c-4386-be84-53dce4e9344b/image.png)
 
-옆의 사진과 같이 간단하게 테스트용 설정 파일을 추가하여 다르게 사용하면 된다.
+
+위의 사진과 같이 간단하게 테스트용 설정 파일을 추가하여 다르게 사용하면 된다.
 
 main 패키지의 resources 폴더 아래에 있는 application.yml이 바로 설정 파일인데, 이를 test 패키지 아래에도 새롭게 생성하면 되는 것이다.
 
