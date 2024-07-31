@@ -164,3 +164,64 @@ datasource:
 ```
 
 datasource의 설정을 위와 같이 작성하면 메모리 DB를 사용한다는 의미가 된다. 다만, 스프링 부트의 경우 datasource 설정이 없으면 기본으로 메모리 DB를 사용하므로 별도의 datasource나 JPA와 관련된 추가 설정을 하지 않아도 된다.
+
+---
+
+## 상품 도메인 개발
+
+### 상품 엔티티 - 비즈니스 로직 추가
+
+```java
+@Entity
+@Getter
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@DiscriminatorColumn(name = "dtype")
+public abstract class Item {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "item_id")
+    private Long id;
+
+    private String name;
+
+    private int price;
+
+    private int stockQuantity;
+
+    @ManyToMany(mappedBy = "items")
+    private List<Category> categories = new ArrayList<>();
+
+    public void addStock(int quantity) {
+        this.stockQuantity += quantity;
+    }
+
+    public void removeStock(int quantity) {
+        int restStock = this.stockQuantity - quantity;
+        if (restStock < 0) {
+            throw new NotEnoughStockException("need more stock");
+        }
+        this.stockQuantity = restStock;
+    }
+}
+```
+
+응집력의 관점에서 볼 때, 데이터를 가지고 있는 쪽에 비즈니스 메소드가 있는 것이 좋다. 때문에 Item 엔티티에 stockQuantity를 활용하는 핵심 비즈니스 메소드를 엔티티에 직접 추가하였다.
+
+### Merge vs Persist
+
+```java
+public void save(Item item) {
+    if (item.getId() == null) {
+        em.persist(item);
+    } else {
+        em.merge(item);
+    }
+ }
+```
+
+save함수를 동작 로직을 살펴보면, id가 없을 경우 persist()를 실행하고 있을 경우, 데이터베이스에 저장된 엔티티를 수정하는 merge()를 실행한다. 여기서 persist()와 merge()의 차이점이 무엇일까?
+
+Merge는 Detached 상태의 Entity를 다시 영속화 하는데 사용되고 Persist는 최초 생성된 Entity를 영속화하는데 사용된다. 
+
+→ 더 자세한 내용은 섹션 7, 웹 계층에서 다뤄주신다고 한다.
