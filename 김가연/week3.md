@@ -208,6 +208,49 @@ public abstract class Item {
 
 응집력의 관점에서 볼 때, 데이터를 가지고 있는 쪽에 비즈니스 메소드가 있는 것이 좋다. 때문에 Item 엔티티에 stockQuantity를 활용하는 핵심 비즈니스 메소드를 엔티티에 직접 추가하였다.
 
+### 회원 기능 테스트
+
+```java
+@Test
+public void 회원가입() throws Exception {
+    // given
+    Member member = new Member();
+    member.setName("kim");
+
+    // when
+    Long saveId = memberService.join(member);
+
+    // then
+    assertEquals(member, memberRepository.findOne(saveId));
+}
+```
+
+위는 회원가입 로직을 검증하기 위한 테스트 코드이다. 이때 이 함수를 실행시키면 쿼리문이 어떻게 나갈까?
+
+
+회원이 추가되었기 때문에 insert문 쿼리가 나갈 것이라는 우리의 예상과는 다르게 insert문 쿼리 없이 select문 쿼리만이 실행된 것을 확인할 수 있다. 그 이유가 무엇일까? 이를 알기 위해서는 영속성 컨텍스트의 동작 과정에 대해서 선제적으로 알아야 한다. 지금부터 살펴보자!
+
+먼저 join 메소드의 코드를 살펴보자.
+
+```java
+// MemberService
+@Transactional
+public Long join(Member member) {
+    validateDuplicateMember(member);
+    memberRepository.save(member);
+    return member.getId();
+}
+ 
+// MemberRepository 
+public void save(Member member) {
+    em.persist(member);
+}
+```
+
+우리는 새로운 Member 객체를 저장하기 위해 엔티티매니저에 `persist()` 메서드를 통해 영속화하고 있다. 여기서 중요한 점은 단순히 ‘영속화’를 한다는 점이다. 즉, DB에 반영되는 것이 아니다! `persist` 메소드를 통해 객체를 영속화하면 1차 캐시에 저장되는 동시에 쓰기 지연 SQL 저장소에도 SQL 쿼리문이 생성되어 저장된다. persist를 할 때마다 쓰기 지연 SQL 저장소에는 생성된 SQL 쿼리문이 차곡차곡 쌓이게 되고 그 후 트랜잭션이 커밋되면 비로소 DB에 반영 즉, insert문 쿼리가 나가게 되는 것이다.
+
+하지만 테스트 클래스에서 적용되는 `@Transactional` 은 트랜잭션이 `commit` 되지 않고 `rollback`되게 된다. 때문에 쓰기 지연 SQL 저장소에 쌓인 insert 쿼리문이 실행되지 않는 것이다.
+
 ### Merge vs Persist
 
 ```java
@@ -222,6 +265,4 @@ public void save(Item item) {
 
 save함수를 동작 로직을 살펴보면, id가 없을 경우 persist()를 실행하고 있을 경우, 데이터베이스에 저장된 엔티티를 수정하는 merge()를 실행한다. 여기서 persist()와 merge()의 차이점이 무엇일까?
 
-Merge는 Detached 상태의 Entity를 다시 영속화 하는데 사용되고 Persist는 최초 생성된 Entity를 영속화하는데 사용된다. 
-
-→ 더 자세한 내용은 섹션 7, 웹 계층에서 다뤄주신다고 한다.
+Merge는 Detached 상태의 Entity를 다시 영속화 하는데 사용되고 Persist는 최초 생성된 Entity를 영속화하는데 사용된다. 지금은 그냥 간단하게 persist는 비영속 상태를 영속 상태로, merge는 준영속 상태를 영속 상태로 바꿔준다고만 알아두자. → 더 자세한 내용은 섹션 7, 웹 계층에서 다룬다. 
