@@ -316,3 +316,240 @@ public class OrderRepository {
  `LIKE` 연산자에서 사용되는 와일드카드 문자로써 `%`는 0개 이상의 문자와 일치함을 의미한다. 따라서 `%`가 양쪽에 있는 것은 주어진 문자열이 `name`의 어디에 위치하든지 상관없이 포함되면 조건이 참이 되도록 한다. 
 
  예를 들어 `orderSearch.getMemberName()`이 `"John"`인 경우, `member.name` 필드가 `"John"`을 포함하는 모든 레코드를 검색하게 된다. `name` 필드가 `"John Doe"`인 경우도 조건에 맞게 된다.
+
+ ---
+
+ # 7️⃣ 웹 계층 개발
+
+ ## 홈 화면과 레이아웃
+
+## **뷰 템플릿 변경사항을 서버 재시작 없이 즉시 반영하기**
+
+1. builde.gradle에 spring-boot-devtools 의존성 추가
+    
+    ```java
+    implementation 'org.springframework.boot:spring-boot-devtools'
+    ```
+    
+2. html 파일 수정 후 build-> Recompile 하면 바로 반영된 것 확인 가능! `command +shitft + F9`
+
+## 부트스트랩
+
+예쁜 디자인을 위해서~ 
+
+1. https://getbootstrap.com/ 에 들어가서 최신버전 다운로드 받는다.
+2. 아래와 같은 파일이 다운로드 되는데 이 두 파일을 [resources] - [static]에 그대로 붙여넣는다.
+
+![image](https://github.com/user-attachments/assets/f3dc1320-6f1b-4295-96cd-8acda49cf25a)
+
+
+![image](https://github.com/user-attachments/assets/2b9d6919-20cd-4168-b98d-882a264a6a6d)
+
+
+1. resources/static/css/jumbotron-narrow.css 추가해서 코드 넣으면 더 예쁜 디자인이 보인다.
+
+## 회원 등록
+
+## 유효성 검사( @Valid )
+
+spring boot version이 **2.3** 이상일 경우, 아래 의존성을 추가해 주어야 사용할 수 있다.
+
+```java
+implementation 'org.springframework.boot:spring-boot-starter-validation'
+```
+
+- 유효성 검사에서 사용할 수 있는 어노테이션
+    
+    ```java
+    @Null  // null만 혀용합니다.
+    @NotNull  // null을 허용하지 않습니다. "", " "는 허용합니다.
+    @NotEmpty  // null, ""을 또는 리스트 [] 빈값 허용하지 않습니다. " "는 허용합니다.
+    @NotBlank  // null, "", " " 모두 허용하지 않습니다.
+    
+    @Email  // 이메일 형식을 검사합니다. 다만 ""의 경우를 통과 시킵니다. @Email 보다 아래 나올 @Patten을 통한 정규식 검사를 더 많이 사용합니다.
+    @Pattern(regexp = )  // 정규식을 검사할 때 사용됩니다.
+    @Size(min=, max=)  // 문자길이를 제한할 때 사용, int는 불가!
+    
+    @Max(value = )  // 숫자 value 이하의 값을 받을 때 사용됩니다.
+    @Min(value = )  // 숫자 value 이상의 값을 받을 때 사용됩니다.
+    
+    @Pattern(regexp = )		// 정규표현식으로 검증식 세울 수 있습니다.
+    
+    @Positive  // 값을 양수로 제한합니다.
+    @PositiveOrZero  // 값을 양수와 0만 가능하도록 제한합니다.
+    
+    @Negative  // 값을 음수로 제한합니다.
+    @NegativeOrZero  // 값을 음수와 0만 가능하도록 제한합니다.
+    
+    @Future  // 현재보다 미래
+    @Past  // 현재보다 과거
+    
+    @AssertFalse  // false 여부, null은 체크하지 않습니다.
+    @AssertTrue  // true 여부, null은 체크하지 않습니다.
+    
+    @Valid	// 해당 object validation 실행
+    ```
+    
+
+## `@Valid` 와 `BindingResult`
+
+**`@Valid`** 는 주로 스프링 MVC에서 `Request Body`를 검증하는 데 사용한다. DTO 클래스의 필드에 선언된 유효성 검사 어노테이션들을 기반으로 요청 데이터가 유효한지 검증한다. 만약 유효성 검사를 통과하지 못하면, **`BindingResult`** 객체에 오류가 저장된다.
+
+MemberForm이라는 Requset DTO가 있다고 가정헤보자. 이 클래스의 name 필드에 `@NotEmpty` 로 유효성 검사 어노테이션을 적용하여서 name 은 빈 문자열이나 null 값을 가질 수 없다는 것을 명시해 주었다.
+
+```java
+@Getter @Setter
+public class MemberForm {
+
+    @NotEmpty(message = "회원 이름은 필수 입니다")
+    private String name;
+
+    private String city;
+    private String street;
+    private String zipcode;
+}
+```
+
+Controller 내의 회원 가입 함수(create)의 파라미터 부분에 `@Valid` 어노테이션을 적으면 유효성 검사를 할 수 있다. 동작 시, name필드에 null 값이 들어가면 발생한 오류를 `BindingResult` 객체에 저장하게 된다. 만약 유효성 검사에서 오류가 발생했다면, 다시 createMemberForm(회원 가입 페이지)로 리다이렉션 시킨다.
+
+```java
+    @PostMapping("/members/new")
+    public String create(
+            @Valid MemberForm form,
+            BindingResult result
+      ) {
+
+        if (result.hasErrors()) {
+            return "members/createMemberForm";
+        }
+     
+     ...
+   }
+```
+
+### BindingResult
+
+`@Valid` 어노테이션과 함께 사용되어, 유효성 검사 결과를 담는 객체이다. 
+
+## 변경 감지와 병합(merge)
+
+## 준영속 상태
+
+- 영속 상태의 엔티티가 영속성 컨텍스트에서 분리 된 상태(영속성 컨텍스트가 더는 관리하지 않음)
+- 영속성 컨텍스트가 제공하는 기능을 사용할 수 X
+
+## 준영속 엔티티
+
+준영속 엔티티는 JPA가 관리를 하지 않기 때문에, 객체 수정 시에도 DB에 Update가 일어나지 않는다.
+
+- DB에 한 번 들어갔다가 나온 엔티티
+- DB에 한 번 저장되어서 식별자(id)가 존재하는 객체
+
+```java
+    @PostMapping("/items/{itemId}/edit")
+    public String updateItem(
+            @ModelAttribute("form") BookForm form
+    ) {
+        Book book = new Book();
+
+        book.setId(form.getId());
+        book.setName(form.getName());
+        book.setPrice(form.getPrice());
+        book.setStockQuantity(form.getStockQuantity());
+        book.setAuthor(form.getAuthor());
+        book.setIsbn(form.getIsbn());
+
+        itemService.saveItem(book);
+        return "redirect:/items";
+    }
+```
+
+✔️ 위의 코드에서 book 객체는 `book.setId(form.getId(())` 함으로써, 이미 영속 엔티티였던 form의 id값을 book객체에 설정하게 되므로, book 객체는 *‘이미 DB에 저장된 식별자’*를 가지게 된다. 따라서 book은 준영속 엔티티인 것! 
+
+→ 따라서 updateItem()에서 book 객체의 수정사항은 변경감지(Dirty Checking) 되지 않는다.
+
+## 준영속 엔티티 수정 방법
+
+### 1. **변경 감지 기능 사용 (Dirty Checking)**
+
+영속성 컨텍스트에서 준영속 엔티티와 동일한 식별자를 가진 영속 상태의 엔티티를 다시 조회한 후에 해당 엔티티의 필드를 수정하는 방법이다. 
+
+```java
+@Transactional
+void update(Item itemParam) {  // itemParam: 파라미터로 넘어온 준영속 상태의 엔티티
+    Item findItem = em.find(Item.class, itemParam.getId()); // 같은 엔티티를 조회한다.
+    findItem.setPrice(itemParam.getPrice()); // 데이터를 수정한다.
+    // 트랜잭션 종료 시점에 변경 사항이 자동으로 반영된다. 
+}
+```
+
+1) 영속성 컨텍스트에서 준영속 엔티티인 itemParam과 같은 id를 가진 영속 엔티티(findItem)를 찾아온다.
+
+2) 영속 상태의 엔티티인 findItem의 필드를 수정한다.
+
+3) 트랜젝션 커밋 시점에 내부적으로 flush()가 발생해서 변경 감지가 일어난다. → 따로 save 필요없음!
+
+### 2. **병합 사용 (Merge)**
+
+병합은 준영속 상태의 엔티티를 영속 상태로 변경할 때 사용하는 기능이다.
+
+```java
+@Transactional
+void update(Item itemParam) { //itemParam: 파리미터로 넘어온 준영속 상태의 엔티티 
+			Item **mergeItem** = em.merge(item);
+}
+```
+
+### 병합의 동작 방식
+![image](https://github.com/user-attachments/assets/46320ca1-82e7-4381-9912-e8390533326c)
+
+
+**병합 동작 방식**
+
+1. merge(member) 를 실행한다.
+2. 파라미터로 넘어온 준영속 엔티티의 식별자 값으로 1차 캐시에서 엔티티를 조회한다.
+    
+    2-1. 만약 1차 캐시에 엔티티가 없으면 데이터베이스에서 엔티티를 조회하고, 1차 캐시에 저장한다.
+    
+3. 조회한 영속 엔티티( mergeMember )에 member 엔티티의 값을 채워 넣는다. (member 엔티티의 모든 값을 mergeMember에 밀어 넣는다. 이때 mergeMember의 “회원1”이라는 이름이 “회원명변경”으로 바
+    
+    뀐다.)
+    
+4. 영속 상태인 mergeMember를 반환한다.
+
+강의의 코드로 merge를 실행하면 아래와 같은 역할을 하게 된다. 
+
+```java
+    @Transactional
+    public **Item** updateItem(Long itemId, Book param) { 
+        Item findItem = itemRepository.findOne(itemId); 
+        findItem.setPrice(param.getPrice());
+        ...
+        **return findItem;**
+    }
+```
+
+### 병합 사용 시 주의점
+
+변경 감지 기능을 사용하면 원하는 속성만 선택해서 변경할 수 있지만, **병합을 사용하면 모든 속성이 변경된다. 병합시 값이 없으면 null 로 업데이트 할 위험도 있다. (병합은 모든 필드를 교체한다.)**
+
+예를 들어, item의 가격은 수정하지 않고 그대로 둔다(price = null )고 가정해보자. 병합을 사용하면 `em.merge(item)` 으로 파라미터에 객체를 통째로 넣어서 보내게 된다. 그러면 수정되어 반환된 객체의 price도 null로 수정되기 때문에 문제가 발생할 수 있다.
+
+### **엔티티를 변경할 때는 항상 `변경 감지(Dirty Checking)`를 사용하자!**
+
+merge를 사용하면 편하긴 하나, 단순한 경우에만 사용 가능.. 위험하니까 ㅜㅜ
+
+- 컨트롤러에서 어설프게 엔티티 생성 금지
+    
+    ```java
+        @PostMapping("/items/{itemId}/edit")
+        public String updateItem(
+               @PathVariable Long itemId,
+               @ModelAttribute("form") BookForm form
+        )
+        {
+            itemService.updateItem(itemId, form.getName(), form.getPrice(), form.getStockQuantity());
+            return "redirect:/items";
+        }
+    ```
+  
